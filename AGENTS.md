@@ -112,3 +112,12 @@ Things that bite:
   to a widget or page shows at once and one to a manifest or server file
   restarts the server, but an app, page or server file added or taken away
   needs `pnpm dev` started again.
+- The `dev` script is `exec hearth-apps dev`; keep the `exec`. pnpm runs a
+  script in a shell and passes a stop signal only to that shell, which
+  keeps an interrupt to itself and dies of a terminate signal alone.
+  Without `exec`, stopping `pnpm dev` with `kill`, or with a tool that
+  signals pnpm alone, leaves both dev servers running on their fixed ports
+  (4310 and 5173), and the next `pnpm dev` cannot start. With it,
+  `hearth-apps dev` takes the shell's place, stops the servers when it is
+  stopped, and also when pnpm is gone. Ctrl+C stops everything either way.
+  pnpm's `shell-emulator` setting has no `exec` and cannot run the script.
