@@ -34,8 +34,9 @@ until that contract exists; read `hearth`'s AGENTS.md for where it stands.
   whatever is on `main` within about a minute: it builds the apps here into
   its next release, together with `main` of `hearth`. When the apps were
   written for another SDK version than `hearth` holds, the server keeps the
-  release it runs until the two match again, and `hearth`'s CI builds each
-  of its changes with `main` of this repository.
+  release it runs until the two match again. `hearth`'s CI builds each of
+  its own changes with `main` of this repository, so a change there that
+  breaks the apps here without raising the SDK version fails there.
 
 ## Planned mini-apps
 
