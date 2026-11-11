@@ -1,0 +1,17 @@
+{
+  "name": "hearth-stones",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "hearth": {
+    "sdk": "^0.1.0"
+  },
+  "scripts": {
+    "check": "hearth-apps check",
+    "test": "hearth-apps test",
+    "dev": "hearth-apps dev"
+  },
+  "devDependencies": {
+    "@hearth/sdk": "link:../hearth/packages/sdk"
+  }
+}

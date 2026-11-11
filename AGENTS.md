@@ -10,9 +10,12 @@ framework and its SDK live in the `hearth` repository; on a server the two
 are checked out side by side. This repository is public and licensed under
 AGPL-3.0.
 
-It is empty for now. The mini-app contract (the manifest, the SDK, storage
-and settings) is being built in `hearth` first. Do not add mini-app folders
-until that contract exists; read `hearth`'s AGENTS.md for where it stands.
+It holds no mini-apps yet. The mini-app contract is built in `hearth`
+(`docs/mini-app-contract.md` there): the manifest, the SDK, storage,
+settings, tests, and this repository's own setup. Still to come there are
+the template that a new app starts from (`hearth-apps new`, step 14) and the
+first app, the grocery list (step 15). Read `hearth`'s AGENTS.md for where
+it stands.
 
 ## Rules that must not be broken
 
@@ -47,4 +50,47 @@ Later: stocks, finance, notes.
 
 ## Layout and commands
 
-Not written yet. This section is filled in with the first mini-app.
+This repository and `hearth` lie side by side, in folders named `hearth`
+and `hearth-stones`: the SDK is linked as `../hearth/packages/sdk`. That is
+how the server holds them, and how CI checks them out.
+
+| Path | Holds |
+|---|---|
+| `package.json` | The SDK version the apps are written for (`"hearth": { "sdk": "^0.1.0" }`), `@hearth/sdk` linked from `../hearth/packages/sdk`, and the commands. No other dependency, and no `packageManager` field. |
+| `pnpm-lock.yaml` | Nothing but that link, so that the server installs it with no network (`pnpm install --frozen-lockfile --offline`). |
+| `tsconfig.json`, `eslint.config.js` | One line each: the compiler settings and the lint rules every mini-app is checked with, from the SDK. |
+| `.github/workflows/ci.yml` | CI for every pull request and push to `main`: `main` of `hearth` checked out beside this repository, the link, `pnpm check`, then Hearth built with the apps in. |
+| `<app>/` | One folder per mini-app, named after its ID (none yet). `manifest.ts`, `widget.tsx`, `package.json` (its name, no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
+
+Commands, from this folder, once `pnpm install` has run in `../hearth`:
+
+| Command | Does |
+|---|---|
+| `pnpm install` | Links `@hearth/sdk` from `../hearth`. Nothing is downloaded. |
+| `pnpm check` | `hearth-apps check`: for every app, what the build refuses (another SDK version, an import outside the SDK, a dependency), the required files, the manifest and server file as the server checks them at start-up, types, lint and the app's tests. Run it before every push. |
+| `pnpm test` | `hearth-apps test`: the apps' tests alone. |
+| `pnpm dev` | `hearth-apps dev`: Hearth on this machine with the apps in, at http://localhost:5173, sign-in switched off. Add an app to a space on the Apps page. |
+
+Things that bite:
+
+- An app's tests call its routes with `testApp(server)` from
+  `@hearth/sdk/testing`: the framework's own store, over a database of the
+  test's own. They run inside `hearth` (`hearth-apps test`), never with
+  `vitest` started here, which has no store to call.
+- A test file may import `vitest` and `@hearth/sdk/testing` besides what
+  the app's other files may import; the build refuses anything else, in
+  tests too.
+- Never add a dependency or a `packageManager` field. The server installs
+  this repository offline: a package that is not the link fails that
+  install, and a `packageManager` field makes pnpm fetch that version of
+  itself first, which an offline install cannot.
+- A change here that needs a change in `hearth` (a new SDK version, a new
+  part of the SDK) fails CI until that change is on `main` of `hearth`:
+  merge it there first, then run CI here again. Until both are merged, the
+  server keeps the release it runs.
+- `pnpm dev` uses `hearth`'s development database
+  (`../hearth/packages/server/data`) and signs everyone in as
+  `HEARTH_OWNER_EMAIL`, or `you@example.com` when that is not set. A change
+  to a widget or page shows at once and one to a manifest or server file
+  restarts the server, but an app, page or server file added or taken away
+  needs `pnpm dev` started again.
