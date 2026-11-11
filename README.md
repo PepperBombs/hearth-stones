@@ -15,6 +15,7 @@ Check out this repository beside Hearth, in folders named `hearth` and
 ```sh
 cd hearth && pnpm install
 cd ../hearth-stones && pnpm install   # links the SDK from ../hearth; downloads nothing
+pnpm new stocks                       # a new app in stocks/, copied from Hearth's sample checklist
 pnpm dev                              # Hearth with these apps, at http://localhost:5173
 pnpm check                            # what a pull request must pass: files, types, lint, tests
 ```

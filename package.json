@@ -9,7 +9,8 @@
   "scripts": {
     "check": "hearth-apps check",
     "test": "hearth-apps test",
-    "dev": "hearth-apps dev"
+    "dev": "hearth-apps dev",
+    "new": "hearth-apps new"
   },
   "devDependencies": {
     "@hearth/sdk": "link:../hearth/packages/sdk"

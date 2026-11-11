@@ -12,10 +12,9 @@ AGPL-3.0.
 
 It holds no mini-apps yet. The mini-app contract is built in `hearth`
 (`docs/mini-app-contract.md` there): the manifest, the SDK, storage,
-settings, tests, and this repository's own setup. Still to come there are
-the template that a new app starts from (`hearth-apps new`, step 14) and the
-first app, the grocery list (step 15). Read `hearth`'s AGENTS.md for where
-it stands.
+settings, tests, this repository's own setup and the template a new app
+starts from (`pnpm new <id>`). Still to come is the first app, the grocery
+list (step 15). Read `hearth`'s AGENTS.md for where it stands.
 
 ## Rules that must not be broken
 
@@ -60,7 +59,7 @@ how the server holds them, and how CI checks them out.
 | `pnpm-lock.yaml` | Nothing but that link, so that the server installs it with no network (`pnpm install --frozen-lockfile --offline`). |
 | `tsconfig.json`, `eslint.config.js` | One line each: the compiler settings and the lint rules every mini-app is checked with, from the SDK. |
 | `.github/workflows/ci.yml` | CI for every pull request and push to `main`: `main` of `hearth` checked out beside this repository, the link, `pnpm check`, then Hearth built with the apps in. |
-| `<app>/` | One folder per mini-app, named after its ID (none yet). `manifest.ts`, `widget.tsx`, `package.json` (its name, no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
+| `<app>/` | One folder per mini-app, named after its ID (none yet). `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
 
 Commands, from this folder, once `pnpm install` has run in `../hearth`:
 
@@ -70,9 +69,17 @@ Commands, from this folder, once `pnpm install` has run in `../hearth`:
 | `pnpm check` | `hearth-apps check`: for every app, what the build refuses (another SDK version, an import outside the SDK, a dependency), the required files, the manifest and server file as the server checks them at start-up, types, lint and the app's tests. Run it before every push. |
 | `pnpm test` | `hearth-apps test`: the apps' tests alone. |
 | `pnpm dev` | `hearth-apps dev`: Hearth on this machine with the apps in, at http://localhost:5173, sign-in switched off. Add an app to a space on the Apps page. |
+| `pnpm new <id>` | `hearth-apps new`: a new app in the folder `<id>`, as a copy of the sample checklist in `hearth`. It passes `pnpm check` as it is; its README says what to change first. |
 
 Things that bite:
 
+- A new app starts as a copy of `hearth`'s sample checklist
+  (`packages/fixture-apps/checklist`), with only its ID, its test file's
+  name, its package's name and its README changed. Its name, description,
+  icon and strings are still the checklist's, in both languages, until you
+  change `manifest.ts`: an app nobody changed is called "Checklist" on the
+  dashboard. `pnpm new` overwrites nothing, and a running `pnpm dev` needs
+  starting again to see the new app.
 - An app's tests call its routes with `testApp(server)` from
   `@hearth/sdk/testing`: the framework's own store, over a database of the
   test's own. They run inside `hearth` (`hearth-apps test`), never with
