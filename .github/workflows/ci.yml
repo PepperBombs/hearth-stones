@@ -1,0 +1,97 @@
+# Checks every pull request and every push to main: the mini-apps here,
+# against main of hearth checked out beside this repository, as the server
+# builds the two. See docs/mini-app-contract.md in hearth, section A7, "CI".
+#
+# A change here that needs a change in hearth (a new SDK version, a new part
+# of the SDK) fails until that change is on main of hearth: merge it there
+# first, then run this again.
+#
+# Rules for this file, because the repository is public:
+#   - GitHub-hosted runners only. Never "self-hosted": a pull request from a
+#     stranger would then run on a machine we own.
+#   - No secrets. Nothing here needs one, and pull requests from forks could
+#     not read them anyway.
+#   - The token is read-only.
+#   - Every action is pinned to a full commit hash, with its version in a
+#     comment. To update one, change the hash and the comment together.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A newer push to a pull request replaces the run before it. Runs on main
+  # are never cancelled, so every commit there gets a result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Check the mini-apps and build Hearth with them
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the mini-apps
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: hearth-stones
+          persist-credentials: false
+
+      # Side by side, as on the server: the mini-apps link the SDK as
+      # ../hearth/packages/sdk. Same owner, so that no account is named here.
+      - name: Check out main of hearth beside them
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository_owner }}/hearth
+          ref: main
+          path: hearth
+          persist-credentials: false
+
+      # This repository names no pnpm version of its own: hearth's is used.
+      - name: Install pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: hearth/package.json
+
+      - name: Install Node and restore the pnpm cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: hearth/pnpm-lock.yaml
+
+      - name: Install hearth
+        working-directory: hearth
+        run: pnpm install --frozen-lockfile
+
+      # As the server's deploy does it: the lockfile here holds nothing but
+      # the link to the SDK, so the install needs no network.
+      - name: Link the mini-apps to the SDK of hearth
+        working-directory: hearth-stones
+        run: pnpm install --frozen-lockfile --offline
+
+      # hearth-apps check: every app's files, manifest and server file,
+      # types, lint and tests. It ends with status 3 for one thing only: the
+      # apps here declare another SDK version than main of hearth holds.
+      - name: Check the mini-apps
+        working-directory: hearth-stones
+        run: |
+          status=0
+          pnpm check || status=$?
+          if [ "$status" -eq 3 ]; then
+            echo "::error title=Another SDK version::The mini-apps here were written for another version of the SDK than main of hearth holds (the lines above name both). Merge the SDK change into hearth first, then run this again."
+          fi
+          exit "$status"
+
+      # What the server's deploy does next: the framework built with the
+      # apps in.
+      - name: Build Hearth with them
+        working-directory: hearth
+        env:
+          HEARTH_APPS_DIR: ../hearth-stones
+        run: pnpm build
