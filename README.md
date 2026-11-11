@@ -5,7 +5,8 @@ each. A mini-app is a small, self-contained app (a grocery list, a feed of
 trending repositories) that appears as a widget on the Hearth dashboard and,
 optionally, as a full page.
 
-Status: no mini-apps yet. The first is the grocery list.
+Status: one mini-app, the grocery list (`grocery/`): a shopping list the
+family shares, grouped by aisle.
 
 ## Working on the apps
 

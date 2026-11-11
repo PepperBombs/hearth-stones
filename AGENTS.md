@@ -10,11 +10,12 @@ framework and its SDK live in the `hearth` repository; on a server the two
 are checked out side by side. This repository is public and licensed under
 AGPL-3.0.
 
-It holds no mini-apps yet. The mini-app contract is built in `hearth`
+It holds one mini-app so far, the grocery list (`grocery/`). Mini-apps are
+written to the mini-app contract, which is built in `hearth`
 (`docs/mini-app-contract.md` there): the manifest, the SDK, storage,
 settings, tests, this repository's own setup and the template a new app
-starts from (`pnpm new <id>`). Still to come is the first app, the grocery
-list (step 15). Read `hearth`'s AGENTS.md for where it stands.
+starts from (`pnpm new <id>`). Read `hearth`'s AGENTS.md for where it
+stands.
 
 ## Rules that must not be broken
 
@@ -42,8 +43,9 @@ list (step 15). Read `hearth`'s AGENTS.md for where it stands.
 
 ## Planned mini-apps
 
-1. Grocery list (storage, forms, shared UI).
-2. GitHub trending (scheduler, fetching from outside).
+1. Grocery list (storage, forms, shared UI). Built: `grocery/`.
+2. GitHub trending (scheduler, fetching from outside). Waits for the
+   scheduler in `hearth`.
 
 Later: stocks, finance, notes.
 
@@ -59,7 +61,8 @@ how the server holds them, and how CI checks them out.
 | `pnpm-lock.yaml` | Nothing but that link, so that the server installs it with no network (`pnpm install --frozen-lockfile --offline`). |
 | `tsconfig.json`, `eslint.config.js` | One line each: the compiler settings and the lint rules every mini-app is checked with, from the SDK. |
 | `.github/workflows/ci.yml` | CI for every pull request and push to `main`: `main` of `hearth` checked out beside this repository, the link, `pnpm check`, then Hearth built with the apps in. |
-| `<app>/` | One folder per mini-app, named after its ID (none yet). `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
+| `<app>/` | One folder per mini-app, named after its ID. `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
+| `grocery/` | The grocery list: a shopping list the people of a space share, grouped by the aisles the space sets, with each person's own "Hide ticked items". Its README says how its data is shaped and what `add` does with a name that is on the list already. |
 
 Commands, from this folder, once `pnpm install` has run in `../hearth`:
 
@@ -87,6 +90,14 @@ Things that bite:
 - A test file may import `vitest` and `@hearth/sdk/testing` besides what
   the app's other files may import; the build refuses anything else, in
   tests too.
+- An app's end-to-end test is not here: this repository has no Playwright,
+  since it installs nothing but the SDK's link. The grocery list's is
+  `e2e/mini-apps/grocery.spec.ts` in `hearth`: two people of a family
+  sharing one list in their browsers. `pnpm e2e:mini-apps` there builds
+  Hearth with this folder and runs it, and so does `hearth`'s CI, against
+  `main` of this repository; CI here does not. Before merging a change to
+  an app's texts or layout, run it, and change the test in `hearth` with
+  it.
 - Never add a dependency or a `packageManager` field. The server installs
   this repository offline: a package that is not the link fails that
   install, and a `packageManager` field makes pnpm fetch that version of
