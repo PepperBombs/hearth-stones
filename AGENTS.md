@@ -24,13 +24,18 @@ until that contract exists; read `hearth`'s AGENTS.md for where it stands.
 - **No secrets in Git.**
 - **A mini-app uses only the Hearth SDK**, never framework internals or
   another mini-app's files.
-- **One folder per mini-app.** Deleting the folder removes the app
-  completely.
+- **One folder per mini-app.** Deleting the folder removes the app's code
+  from the next release. Its data stays in the server's database, hidden,
+  until an owner deletes it, and putting the folder back brings the app back.
 - **Every interface string exists in English and Simplified Chinese**,
   including the app's name, description and setting labels. Content typed by
   users is never translated.
 - **Reviews go through pull requests into `main`.** The server deploys
-  whatever is on `main` within about a minute.
+  whatever is on `main` within about a minute: it builds the apps here into
+  its next release, together with `main` of `hearth`. When the apps were
+  written for another SDK version than `hearth` holds, the server keeps the
+  release it runs until the two match again, and `hearth`'s CI builds each
+  of its changes with `main` of this repository.
 
 ## Planned mini-apps
 
