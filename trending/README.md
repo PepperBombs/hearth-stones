@@ -204,4 +204,15 @@ An entry can answer only some searches (`"query": { "q": "language:rust" }`),
 or turn them down (`"status": 403`); `hearth`'s `docs/mini-app-contract.md`,
 section C, "Switches", has the file's whole form.
 
+## Its end-to-end test
+
+The app's end-to-end test is in `hearth`, `e2e/mini-apps/trending.spec.ts`,
+since this repository has no Playwright: the owner and a family member,
+each in a browser of their own, on one server built with this folder,
+whose job runs against a file of stand-ins in place of GitHub. It answers
+each search by the text of its query (`fork:false archived:false
+forks:>=10 language:rust` for this week's Rust), so a change to the
+searches, as to the app's texts or layout, changes that test too. Run it
+there with `pnpm e2e:mini-apps` before such a change is merged.
+
 Everything in this folder is sample data.

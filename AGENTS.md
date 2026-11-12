@@ -49,12 +49,13 @@ setup and the template a new app starts from (`pnpm new <id>`). Read
    `trending/`: C9, its data, job and dashboard card: a job that searches
    GitHub every hour for the new repositories with the most stars, the
    deny-list and the space's Hide list, and the card with the first five
-   of each person's own range; and C10, its page: "Updated N min ago" and
+   of each person's own range; C10, its page: "Updated N min ago" and
    "Refresh now", the banner when a refresh failed, the range control,
-   the language chips, the list and the Hide list. Next: C11, its
-   end-to-end test in `hearth`. What it needs from `hearth` is steps C1
-   to C8 there, so CI here passes with it once those are on `main` of
-   `hearth`, which is merged first.
+   the language chips, the list and the Hide list; and C11, its
+   end-to-end test in `hearth` (`e2e/mini-apps/trending.spec.ts`). What
+   it needs from `hearth` is steps C1 to C8 there, so CI here passes with
+   it once those are on `main` of `hearth`, which is merged first; the
+   end-to-end test runs in `hearth`'s CI once this app is on `main` here.
 
 Later: stocks, finance, notes.
 
@@ -101,13 +102,17 @@ Things that bite:
   the app's other files may import; the build refuses anything else, in
   tests too.
 - An app's end-to-end test is not here: this repository has no Playwright,
-  since it installs nothing but the SDK's link. The grocery list's is
-  `e2e/mini-apps/grocery.spec.ts` in `hearth`: two people of a family
-  sharing one list in their browsers. `pnpm e2e:mini-apps` there builds
-  Hearth with this folder and runs it, and so does `hearth`'s CI, against
-  `main` of this repository; CI here does not. Before merging a change to
-  an app's texts or layout, run it, and change the test in `hearth` with
-  it. GitHub Trending has no such file yet: step C11 adds it.
+  since it installs nothing but the SDK's link. Each app's is
+  `e2e/mini-apps/<id>.spec.ts` in `hearth`, two people of a family using
+  it in their browsers: `grocery.spec.ts` (sharing one list) and
+  `trending.spec.ts` (the lists, the Hide list and the failed states, its
+  job running over stand-ins for GitHub's search). `pnpm e2e:mini-apps`
+  there builds Hearth with this folder and runs them, and so does
+  `hearth`'s CI, against `main` of this repository; CI here does not.
+  Before merging a change to an app's texts or layout, run it, and change
+  the test in `hearth` with it. GitHub Trending's test answers each search
+  by the text of its query (`fork:false archived:false forks:>=10
+  language:rust`), so a change to the searches changes it too.
 - `pnpm dev` runs the apps' jobs against the real hosts their manifests
   name: GitHub Trending searches the real `api.github.com` as soon as it
   is added to a space, and every hour after, from this machine's address,
