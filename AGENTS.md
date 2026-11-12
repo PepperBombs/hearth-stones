@@ -11,12 +11,11 @@ are checked out side by side. This repository is public and licensed under
 AGPL-3.0.
 
 It holds two mini-apps so far: the grocery list (`grocery/`) and GitHub
-Trending (`trending/`), whose own page is still to come. Mini-apps are
-written to the mini-app contract, which is built in `hearth`
-(`docs/mini-app-contract.md` there): the manifest, the SDK, storage,
-settings, jobs, tests, this repository's own setup and the template a new
-app starts from (`pnpm new <id>`). Read `hearth`'s AGENTS.md for where it
-stands.
+Trending (`trending/`). Mini-apps are written to the mini-app contract,
+which is built in `hearth` (`docs/mini-app-contract.md` there): the
+manifest, the SDK, storage, settings, jobs, tests, this repository's own
+setup and the template a new app starts from (`pnpm new <id>`). Read
+`hearth`'s AGENTS.md for where it stands.
 
 ## Rules that must not be broken
 
@@ -47,14 +46,15 @@ stands.
 1. Grocery list (storage, forms, shared UI). Built: `grocery/`.
 2. GitHub trending (a scheduled job, fetching from outside), steps C9 to
    C11 of section C of `hearth`'s `docs/mini-app-contract.md`. Built:
-   `trending/`, C9, its data, job and dashboard card: a job that searches
+   `trending/`: C9, its data, job and dashboard card: a job that searches
    GitHub every hour for the new repositories with the most stars, the
    deny-list and the space's Hide list, and the card with the first five
-   of each person's own range. Next: C10, its page (the range control,
-   the language chips, the Hide list), then C11, its end-to-end test in
-   `hearth`. What it needs from `hearth` is steps C1 to C8 there, so CI
-   here passes with it once those are on `main` of `hearth`, which is
-   merged first.
+   of each person's own range; and C10, its page: "Updated N min ago" and
+   "Refresh now", the banner when a refresh failed, the range control,
+   the language chips, the list and the Hide list. Next: C11, its
+   end-to-end test in `hearth`. What it needs from `hearth` is steps C1
+   to C8 there, so CI here passes with it once those are on `main` of
+   `hearth`, which is merged first.
 
 Later: stocks, finance, notes.
 
@@ -72,7 +72,7 @@ how the server holds them, and how CI checks them out.
 | `.github/workflows/ci.yml` | CI for every pull request and push to `main`: `main` of `hearth` checked out beside this repository, the link, `pnpm check`, then Hearth built with the apps in. |
 | `<app>/` | One folder per mini-app, named after its ID. `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
 | `grocery/` | The grocery list: a shopping list the people of a space share, grouped by the aisles the space sets, with each person's own "Hide ticked items". Its README says how its data is shaped and what `add` does with a name that is on the list already. |
-| `trending/` | GitHub Trending: the new repositories on GitHub with the most stars, created in the last day, week or month. Its job (`refresh` in `server.ts`, every hour) searches `api.github.com` for every language and each language the space follows, leaves out spam (`spam.ts`, the deny-list) and keeps the lists; the space's Hide list is left out of every list. Its card shows the first five of each person's own range. No page yet. Its README says what the searches ask, what is kept and how to run it against stand-ins. |
+| `trending/` | GitHub Trending: the new repositories on GitHub with the most stars, created in the last day, week or month. Its job (`refresh` in `server.ts`, every hour) searches `api.github.com` for every language and each language the space follows, leaves out spam (`spam.ts`, the deny-list) and keeps the lists; the space's Hide list is left out of every list. Its card shows the first five of each person's own range; its page (`page.tsx`) every list, by range and by language, with "Refresh now", the banner when a refresh failed, and "Hide", "Undo" and "Hidden (n)" for edit access. `format.ts` writes the times and counts of both. Its README says what the searches ask, what is kept, what the page shows and how to run it against stand-ins. |
 
 Commands, from this folder, once `pnpm install` has run in `../hearth`:
 
@@ -117,6 +117,13 @@ Things that bite:
   pnpm dev` (its README has a sample), or run no job at all with
   `HEARTH_JOBS=off`. No test or script may reach GitHub: an app's tests
   answer its requests with the function they give `runJob`.
+- `useQuery` suspends whenever its input is one it has not answered yet,
+  and the shell then draws the skeleton in place of the whole widget or
+  page until the answer is there. A page whose query follows a control
+  (GitHub Trending's range and language chips) passes the input through
+  React's `useDeferredValue`: the control answers at once, and the list
+  shown stays, dimmed, until the new one comes, also when a setting
+  changed it.
 - A job runs for the space, for no one in it: its `ctx.settings` holds the
   space's settings alone. What a job needs to know is a setting of scope
   `space` (GitHub Trending's `languages`); a person's own settings (its

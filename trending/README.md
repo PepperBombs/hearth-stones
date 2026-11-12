@@ -3,11 +3,11 @@
 The latest popular projects on GitHub: new repositories with the most
 stars, created in the last day, week or month. A job searches GitHub every
 hour, once for each space the app is in, and keeps the lists of its last
-run that went well; the dashboard card shows the first five of the range
-each person chose, with when they were fetched. The app's own page, with
-the range control, the language chips and the Hide list, is the next step
-of the build (C10 in `hearth`'s `docs/mini-app-contract.md`); until then
-the card is all there is to see.
+run that went well. The dashboard card shows the first five of the range
+each person chose, with when they were fetched; the app's own page shows
+every list, by range and by the languages the space follows, and is where
+people with edit access refresh the lists and hide what they do not want
+to see (see "The page" below).
 
 | File | Holds |
 |---|---|
@@ -15,6 +15,8 @@ the card is all there is to see.
 | `server.ts` | Two collections, `repos` (the lists) and `hidden` (the space's Hide list), the queries `list` and `hidden`, the mutations `hide` and `show`, and the job `refresh`, which runs every 60 minutes. |
 | `spam.ts` | The deny-list: three patterns of spam, which only `server.ts` imports. |
 | `widget.tsx` | The body of the dashboard card: the first five repositories of the reader's own range, of every language, each with its rank, owner/name linked to GitHub (in a new tab) and its stars; under them "Updated N min ago" (the time of day after 90 minutes), "Refreshing…" while a run is going on or was asked for, or the failed state ("Couldn't reach GitHub at 14:05. Showing results from 13:05."). |
+| `page.tsx` | The app's own page: "Updated N min ago" and "Refresh now", or the banner when the last refresh failed with "Try again"; the range (Today, This week, This month) and a chip for every language the space follows; the list, with each repository's rank, owner/name linked to GitHub, description, language, stars, forks and age; "Hide", "Undo" and "Hidden (n)" for people with edit access. |
+| `format.ts` | How the card and the page write times and counts, in the reader's language and on the browser's clock: "Updated 12 min ago", the failed state, "3 d old", "32,104"; and the clock they read again every 15 seconds. |
 | `trending.test.ts` | Its tests, written with `testApp` from `@hearth/sdk/testing` and run with `hearth-apps test`: the searches a run asks for, what it keeps and what the deny-list leaves out, runs that GitHub turns down or answers wrongly, the Hide list, the languages a space follows, and a personal space. |
 | `package.json` | The app's name. A mini-app declares no dependencies. |
 
@@ -128,11 +130,49 @@ filtered three ways.
 | Setting | For | Default |
 |---|---|---|
 | `languages` | The space: the languages to follow, of ten. Each adds three searches to every run. Anyone with edit access may change them, and the next run follows them. | none: the lists of every language only |
-| `range` | Each person: the range the card shows. | This week |
-| `hideDescriptions` | Each person: the app's page (next step) leaves the descriptions out. | off |
+| `range` | Each person: the range the card shows and the page starts at. | This week |
+| `hideDescriptions` | Each person: the page leaves the descriptions out. | off |
 
 The languages belong to the space, not to each person, because the job
 that searches for them runs for the space and sees no one's own settings.
+
+## The page
+
+At the top, when the lists were fetched ("Updated 12 min ago", the time of
+day after an hour and a half) and, for people with edit access, "Refresh
+now", which reads "Refreshing…" while a run is going on or was asked for.
+A run asked for starts at once, or 5 minutes after the last one started,
+so pressing it again does no harm. When the last refresh failed, a banner
+takes their place: "Couldn't reach GitHub at 14:05. Showing results from
+13:05.", or only when it failed if no refresh has gone well yet, with "Try
+again" for people with edit access.
+
+Under it, the range, which starts at each person's own ("Show first" in
+the settings), and a chip for "All" and each language the space follows,
+in the order of the settings; none when the space follows no language.
+Then the list of that range and language, in GitHub's order: the rank
+(the place among those shown, after the Hide list), owner/name linked to
+the repository on GitHub in a new tab, the description on one line (cut
+short with "…" when it is longer, and left out for whoever hides
+descriptions), the language as GitHub names it, the stars, the forks and
+how old the repository is ("20 h old" under two days, then "3 d old"). A
+list GitHub found nothing for says "No new repositories here yet.", and
+before the first refresh went well, "No results yet. The first refresh is
+on its way."
+
+People with edit access have "Hide" on every row. The row gives way to
+"Hid owner/name. Undo" until they hide another or turn to another list,
+and "Hidden (n)" under the list holds everything the space has hidden,
+the last first, each with "Show again". Hiding and showing count for the
+whole space and every list. People who may only look see the same lists,
+with nothing to press but the range and the chips.
+
+The range and the chips answer a click at once. A list not seen yet on
+this page is fetched first, and the one shown stays, dimmed, until it is
+there. Times are on the reader's clock and in their language, and the
+page reads the clock again every 15 seconds, so the minutes and ages move
+on by themselves. There are no pictures: Hearth's pages load images from
+its own server only, so GitHub's avatars are left out.
 
 ## Running it on your machine
 

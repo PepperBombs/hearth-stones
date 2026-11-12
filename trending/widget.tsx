@@ -1,6 +1,6 @@
-import { useEffect, useId, useState } from "react";
-import type { Locale } from "@hearth/sdk";
+import { useId } from "react";
 import { EmptyState, Icon, Row, Rows, appHooks } from "@hearth/sdk/web";
+import { compactNumber, failureText, updatedText, useNow, wholeNumber } from "./format";
 import manifest from "./manifest";
 import type server from "./server";
 
@@ -8,10 +8,6 @@ const { useApp, useQuery, useJob } = appHooks<typeof server>();
 
 /** How many repositories the card lists: the first of the reader's own range, of every language. */
 const SHOWN = 5;
-/** How often the widget reads the clock again, so that "Updated N min ago" moves on by itself. */
-const TICK_MS = 15_000;
-/** Up to this many minutes it says "Updated N min ago"; after that, the time of day. */
-const MINUTES_SHOWN = 90;
 
 /**
  * The body of GitHub Trending's card on the dashboard: the five new
@@ -24,7 +20,10 @@ const MINUTES_SHOWN = 90;
  * how its runs went: `succeededAt` is when the lists shown were fetched,
  * `failedAt` when the last run failed (only when it ended after the last
  * that went well), and `running` that a run is going on or was asked for.
- * Asking for a run ("Refresh now", "Try again") is left to the app's page.
+ * Asking for a run ("Refresh now", "Try again") is left to the app's page
+ * (page.tsx). The two write times and counts alike (format.ts), and the
+ * clock is read again every 15 seconds, so the minutes move on by
+ * themselves.
  *
  * The shell draws the card around it, the skeleton until the first answers
  * are there and the failed state when they cannot be had.
@@ -36,24 +35,9 @@ export default function Widget() {
   const now = useNow();
   const caption = useId();
   const newTab = useId();
-  const clock = (at: string) => timeOfDay(at, locale);
   // Each range is named once, in the manifest's options, in both languages.
   const rangeName = manifest.settings?.range.options[settings.range][locale];
-
-  const updated = (at: string) => {
-    // A time the server's clock put a little ahead of this browser's is "just now".
-    const minutes = Math.floor((now - Date.parse(at)) / 60_000);
-    if (minutes < 1) return t("updatedNow");
-    if (minutes < MINUTES_SHOWN) return t("updatedMinutes", { minutes });
-    return t("updatedAt", { time: clock(at) });
-  };
-
-  const failure =
-    refresh.failedAt === null
-      ? null
-      : refresh.succeededAt === null
-        ? t("failed", { time: clock(refresh.failedAt) })
-        : t("failedShowing", { time: clock(refresh.failedAt), previous: clock(refresh.succeededAt) });
+  const failure = failureText(t, locale, refresh);
 
   return (
     <div className="flex min-h-[88px] flex-1 flex-col">
@@ -106,39 +90,9 @@ export default function Widget() {
             {failure}
           </p>
         ) : refresh.succeededAt !== null ? (
-          <p className="num text-xs text-fg-3">{updated(refresh.succeededAt)}</p>
+          <p className="num text-xs text-fg-3">{updatedText(t, locale, refresh.succeededAt, now)}</p>
         ) : null}
       </div>
     </div>
   );
-}
-
-/** This browser's clock, read again every TICK_MS while the widget is shown. */
-function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
-
-/** The language tag `Intl` formats in for the reader's language. */
-const tagOf = (locale: Locale) => (locale === "zh" ? "zh-CN" : "en-US");
-
-/** A moment as a time of day on the reader's clock, in their language: "14:05". */
-function timeOfDay(at: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(tagOf(locale), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(
-    new Date(at),
-  );
-}
-
-/** A count in full, as the reader's language writes it: "12,345". */
-function wholeNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(tagOf(locale)).format(value);
-}
-
-/** A count in few characters, as the reader's language shortens it: "12.3K", "1.2万". */
-function compactNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(tagOf(locale), { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }

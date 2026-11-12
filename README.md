@@ -8,8 +8,8 @@ optionally, as a full page.
 Status: two mini-apps. The grocery list (`grocery/`): a shopping list the
 family shares, grouped by aisle. GitHub Trending (`trending/`): the new
 repositories on GitHub with the most stars, by day, week and month,
-searched every hour; its dashboard card is built, and its own page, with
-the filters, comes next.
+searched every hour, on a dashboard card and on a page of its own with
+the range, the languages the space follows and a Hide list against spam.
 
 ## Working on the apps
 
