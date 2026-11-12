@@ -44,8 +44,14 @@ stands.
 ## Planned mini-apps
 
 1. Grocery list (storage, forms, shared UI). Built: `grocery/`.
-2. GitHub trending (scheduler, fetching from outside). Waits for the
-   scheduler in `hearth`.
+2. GitHub trending (a scheduled job, fetching from outside). What it needs
+   from `hearth` is built there (section C of its
+   `docs/mini-app-contract.md`, steps C1 to C8): jobs beside the queries
+   and mutations, `ctx.fetch`, the scheduler, `useJob`, `runJob` in an
+   app's tests, and a sample app with a job to read
+   (`packages/fixture-apps/headlines`). The app itself is steps C9 to C11;
+   CI here passes with it once C1 to C8 are on `main` of `hearth`, which
+   is merged first.
 
 Later: stocks, finance, notes.
 
