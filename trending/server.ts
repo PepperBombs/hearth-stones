@@ -65,9 +65,12 @@ const app = defineServer(manifest, {
 
 /**
  * What the job reads of a search's answer. An answer of another shape fails
- * the run, and the lists kept stay as they are.
+ * the run, and the lists kept stay as they are. `incomplete_results` is true
+ * when GitHub's search ran out of time and gives what it found so far:
+ * fewer repositories than there are, maybe none, so that run fails too.
  */
 const searchAnswer = z.object({
+  incomplete_results: z.boolean().optional(),
   items: z.array(
     z.object({
       id: z.number().int().positive(),
@@ -185,6 +188,9 @@ export default app.routes({
           if (!answer.ok) throw new Error(`GitHub's search answered ${answer.status}.`);
           const read = searchAnswer.safeParse(answer.json());
           if (!read.success) throw new Error("GitHub's search did not answer with a list of repositories.");
+          if (read.data.incomplete_results === true) {
+            throw new Error("GitHub's search ran out of time and gave only part of its results (incomplete_results).");
+          }
           sets.push({ range, set, repos: read.data.items.filter(keep).slice(0, PER_PAGE) });
         }
       }

@@ -77,8 +77,9 @@ describe("trending", () => {
 
     expect(await app.runJob("refresh", { now: NOW, fetch: github({}, asked) })).toEqual({ ok: true, error: null });
 
-    // Created since the run's start less a day, a week or 30 days, in UTC to the second; no forks, nothing
-    // archived, and forked at least 3, 10 or 25 times.
+    // Created since the run's start less a day, a week or 30 days, in UTC to the second, whatever the server's
+    // own time zone (these tests run in one 8 hours from UTC); no forks, nothing archived, and forked at least
+    // 3, 10 or 25 times.
     const day = "created:>=2026-11-11T14:05:07+00:00 fork:false archived:false forks:>=3";
     const week = "created:>=2026-11-05T14:05:07+00:00 fork:false archived:false forks:>=10";
     const month = "created:>=2026-10-13T14:05:07+00:00 fork:false archived:false forks:>=25";
@@ -108,6 +109,10 @@ describe("trending", () => {
     expect(asked[0]?.url).toBe(
       "https://api.github.com/search/repositories?q=created%3A%3E%3D2026-11-11T14%3A05%3A07%2B00%3A00+fork%3Afalse+archived%3Afalse+forks%3A%3E%3D3&sort=stars&order=desc&per_page=25",
     );
+  });
+
+  it("runs where the time of day is not UTC's, so that the dates of the searches above are shown to be UTC's", () => {
+    expect(NOW.getTimezoneOffset()).not.toBe(0);
   });
 
   it("asks one search a range without languages, and 33 with all ten", async () => {
@@ -190,6 +195,24 @@ describe("trending", () => {
     expect(() => lin.query("list", { range: "year" as "week" })).toThrow("invalid_request");
   });
 
+  it("keeps a description and a language on one line, cut at their limits without half of a character", async () => {
+    const app = testApp(server);
+    const lin = app.as({ name: "Lin", access: "view" });
+    const whole = "w".repeat(350);
+    // Where a description is cut, at its 349th place, begins a character beyond the basic plane: it goes whole.
+    const emoji = found("sample-dev/emoji", { description: `${"y".repeat(348)}😀 and more` });
+    const exact = found("sample-dev/exact", { description: whole });
+    const language = found("sample-dev/language", { language: `Very\nLong ${"Language".repeat(10)}` });
+    expect(await app.runJob("refresh", { now: NOW, fetch: github({ week: [emoji, exact, language] }) })).toEqual({ ok: true, error: null });
+
+    const [cut, kept, named] = lin.query("list", { range: "week" });
+    expect(cut?.description).toBe(`${"y".repeat(348)}…`);
+    // Exactly 350 is not cut.
+    expect(kept?.description).toBe(whole);
+    expect(named?.language).toBe(`${`Very Long ${"Language".repeat(10)}`.slice(0, 59)}…`);
+    expect(named?.language).toHaveLength(60);
+  });
+
   it("leaves out what the deny-list takes for spam, and keeps what only looks like it", async () => {
     const app = testApp(server);
     const lin = app.as({ name: "Lin", access: "view" });
@@ -213,6 +236,15 @@ describe("trending", () => {
       found("sample-dev/name with spaces"),
       found("sample-dev/..%2F..%2Fsomewhere"),
       found("https://example.com/sample"),
+      // Case is ignored, and the space between the two words may be left out.
+      found("sample-bots/Solana-Mint-Bot"),
+      found("sample-bots/mintbot"),
+      found("sample-wallets/FakeBalance"),
+      found("sample-wallets/flashusdt"),
+      // Near misses, kept: a word that only ends like one, four digits that are no year, "installer" inside a word.
+      found("sample-dev/peppermint-bot", { description: "Reminds you of tea time." }),
+      found("sample-dev/tool-1234-installer", { description: "Installs the tool." }),
+      found("sample-dev/installerkit", { description: "Since 2021, installerkit packs apps for Windows." }),
     ];
 
     expect(await app.runJob("refresh", { now: NOW, fetch: github({ week }) })).toEqual({ ok: true, error: null });
@@ -222,6 +254,9 @@ describe("trending", () => {
       [1, "sample-dev/mint-theme"],
       [2, "sample-dev/flash-attention"],
       [3, "sample-dev/fake-balancer"],
+      [4, "sample-dev/peppermint-bot"],
+      [5, "sample-dev/tool-1234-installer"],
+      [6, "sample-dev/installerkit"],
     ]);
   });
 
@@ -289,6 +324,21 @@ describe("trending", () => {
         "GitHub's search did not answer with a list of repositories.",
       ],
       [
+        "a repository whose ID is no ID",
+        atTheWeek(() => answer(found("sample-dev/zero", { id: 0 }))),
+        "GitHub's search did not answer with a list of repositories.",
+      ],
+      [
+        "a search GitHub cut short, with part of what it found",
+        atTheWeek(() => ({ body: { total_count: 1, incomplete_results: true, items: [found("sample-dev/partial")] } })),
+        "GitHub's search ran out of time and gave only part of its results (incomplete_results).",
+      ],
+      [
+        "a search GitHub cut short, with nothing found",
+        atTheWeek(() => ({ body: { total_count: 0, incomplete_results: true, items: [] } })),
+        "GitHub's search ran out of time and gave only part of its results (incomplete_results).",
+      ],
+      [
         "a page that is not JSON",
         atTheWeek(() => ({ body: "<html>Unicorn!</html>" })),
         /^The answer from https:\/\/api\.github\.com\/search\/repositories is not JSON/,
@@ -330,8 +380,9 @@ describe("trending", () => {
     expect(() => lin.mutation("hide", { githubId: b.id, fullName: b.full_name })).toThrow("forbidden");
     const hiddenB = sam.mutation("hide", { githubId: b.id, fullName: b.full_name });
     expect(hiddenB).toMatchObject({ githubId: b.id, fullName: "sample-dev/b", createdBy: sam.user.id });
-    // Hidden twice, it is on the list once.
+    // Hidden twice, it is on the list once: also under another name, as after GitHub renamed it, since its ID is the same.
     expect(sam.mutation("hide", { githubId: b.id, fullName: b.full_name })).toEqual(hiddenB);
+    expect(sam.mutation("hide", { githubId: b.id, fullName: "sample-dev/b-renamed" })).toEqual(hiddenB);
     expect(lin.query("hidden")).toEqual([hiddenB]);
 
     // Every list leaves it out, for everyone, ranks closing up behind it.
@@ -370,20 +421,22 @@ describe("trending", () => {
     const app = testApp(server);
     const sam = app.as({ name: "Sam" });
     const first = found("sample-dev/first-hidden");
+    const last = found("sample-dev/last-hidden");
     const shown = found("sample-dev/still-shown");
-    await app.runJob("refresh", { now: NOW, fetch: github({ week: [first, shown] }) });
+    await app.runJob("refresh", { now: NOW, fetch: github({ week: [first, last, shown] }) });
 
     sam.mutation("hide", { githubId: first.id, fullName: first.full_name });
-    for (let index = 1; index < 1000; index += 1) {
+    for (let index = 2; index < 1000; index += 1) {
       sam.mutation("hide", { githubId: 1_000_000 + index, fullName: `sample-dev/hidden-${index}` });
     }
+    sam.mutation("hide", { githubId: last.id, fullName: last.full_name });
     expect(() => sam.mutation("hide", { githubId: shown.id, fullName: shown.full_name })).toThrow("conflict");
     expect(sam.query("hidden")).toHaveLength(1000);
-    // The one hidden first is left out still.
+    // The one hidden first and the one hidden last are both left out.
     expect(names(sam.query("list", { range: "week" }))).toEqual(["sample-dev/still-shown"]);
     // One that is on the list already is no new one.
     expect(sam.mutation("hide", { githubId: first.id, fullName: first.full_name })).toMatchObject({ githubId: first.id });
-    sam.mutation("show", { githubId: 1_000_001 });
+    sam.mutation("show", { githubId: 1_000_002 });
     expect(sam.mutation("hide", { githubId: shown.id, fullName: shown.full_name })).toMatchObject({ githubId: shown.id });
   });
 

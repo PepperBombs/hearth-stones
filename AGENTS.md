@@ -45,17 +45,19 @@ setup and the template a new app starts from (`pnpm new <id>`). Read
 
 1. Grocery list (storage, forms, shared UI). Built: `grocery/`.
 2. GitHub trending (a scheduled job, fetching from outside), steps C9 to
-   C11 of section C of `hearth`'s `docs/mini-app-contract.md`. Built:
-   `trending/`: C9, its data, job and dashboard card: a job that searches
-   GitHub every hour for the new repositories with the most stars, the
-   deny-list and the space's Hide list, and the card with the first five
-   of each person's own range; C10, its page: "Updated N min ago" and
-   "Refresh now", the banner when a refresh failed, the range control,
-   the language chips, the list and the Hide list; and C11, its
-   end-to-end test in `hearth` (`e2e/mini-apps/trending.spec.ts`). What
-   it needs from `hearth` is steps C1 to C8 there, so CI here passes with
-   it once those are on `main` of `hearth`, which is merged first; the
-   end-to-end test runs in `hearth`'s CI once this app is on `main` here.
+   C11 of section C of `hearth`'s `docs/mini-app-contract.md`. Built and
+   reviewed, as every step of section C is (the review's fixes are in the
+   as-built notes there): `trending/`: C9, its data, job and dashboard
+   card: a job that searches GitHub every hour for the new repositories
+   with the most stars, the deny-list and the space's Hide list, and the
+   card with the first five of each person's own range; C10, its page:
+   "Updated N min ago" and "Refresh now", the banner when a refresh
+   failed, the range control, the language chips, the list and the Hide
+   list; and C11, its end-to-end test in `hearth`
+   (`e2e/mini-apps/trending.spec.ts`). What it needs from `hearth` is
+   steps C1 to C8 there, so CI here passes with it once those are on
+   `main` of `hearth`, which is merged first; the end-to-end test runs in
+   `hearth`'s CI once this app is on `main` here.
 
 Later: stocks, finance, notes.
 
@@ -73,7 +75,7 @@ how the server holds them, and how CI checks them out.
 | `.github/workflows/ci.yml` | CI for every pull request and push to `main`: `main` of `hearth` checked out beside this repository, the link, `pnpm check`, then Hearth built with the apps in. |
 | `<app>/` | One folder per mini-app, named after its ID. `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
 | `grocery/` | The grocery list: a shopping list the people of a space share, grouped by the aisles the space sets, with each person's own "Hide ticked items". Its README says how its data is shaped and what `add` does with a name that is on the list already. |
-| `trending/` | GitHub Trending: the new repositories on GitHub with the most stars, created in the last day, week or month. Its job (`refresh` in `server.ts`, every hour) searches `api.github.com` for every language and each language the space follows, leaves out spam (`spam.ts`, the deny-list) and keeps the lists; the space's Hide list is left out of every list. Its card shows the first five of each person's own range; its page (`page.tsx`) every list, by range and by language, with "Refresh now", the banner when a refresh failed, and "Hide", "Undo" and "Hidden (n)" for edit access. `format.ts` writes the times and counts of both. Its README says what the searches ask, what is kept, what the page shows and how to run it against stand-ins. |
+| `trending/` | GitHub Trending: the new repositories on GitHub with the most stars, created in the last day, week or month. Its job (`refresh` in `server.ts`, every hour) searches `api.github.com` for every language and each language the space follows, leaves out spam (`spam.ts`, the deny-list) and keeps the lists; a search GitHub turns down, cuts short (`incomplete_results`) or answers wrongly fails the run and keeps the lists of the last good one. The space's Hide list is left out of every list. Its card shows the first five of each person's own range; its page (`page.tsx`) every list, by range and by language, with "Refresh now", the banner when a refresh failed, and "Hide", "Undo" and "Hidden (n)" for edit access. `format.ts` writes the times and counts of both against the browser's clock, which `now.ts` reads every 15 seconds; it imports nothing at run time, so `format.test.ts` tries it by itself. Its README says what the searches ask, what is kept, what the page shows and how to run it against stand-ins. |
 
 Commands, from this folder, once `pnpm install` has run in `../hearth`:
 
@@ -100,7 +102,15 @@ Things that bite:
   `vitest` started here, which has no store to call.
 - A test file may import `vitest` and `@hearth/sdk/testing` besides what
   the app's other files may import; the build refuses anything else, in
-  tests too.
+  tests too. A test that imports a file of the app's runs what that file
+  imports, so a file that imports React cannot be tried by itself: keep
+  what a widget and a page compute in a file of plain functions, as
+  GitHub Trending's `format.ts` is.
+- The tests run in a time zone 8 hours from UTC (`Asia/Shanghai`), set by
+  `hearth-apps test` wherever it runs, since a server may keep any zone.
+  Write what a job or a handler keeps in UTC (`toISOString()`); a test of
+  what a widget writes on the reader's clock reads that clock with
+  `Date`'s own getters, as `trending/format.test.ts` does.
 - An app's end-to-end test is not here: this repository has no Playwright,
   since it installs nothing but the SDK's link. Each app's is
   `e2e/mini-apps/<id>.spec.ts` in `hearth`, two people of a family using
@@ -112,7 +122,9 @@ Things that bite:
   Before merging a change to an app's texts or layout, run it, and change
   the test in `hearth` with it. GitHub Trending's test answers each search
   by the text of its query (`fork:false archived:false forks:>=10
-  language:rust`), so a change to the searches changes it too.
+  language:rust`), the family following TypeScript and Rust, and turns
+  down a search for any other language, so a change to the searches
+  changes it too.
 - `pnpm dev` runs the apps' jobs against the real hosts their manifests
   name: GitHub Trending searches the real `api.github.com` as soon as it
   is added to a space, and every hour after, from this machine's address,

@@ -1,8 +1,9 @@
-import { useDeferredValue, useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useRef, useState, type RefObject } from "react";
 import type { SettingsOf } from "@hearth/sdk";
 import { Button, Chip, EmptyState, Icon, Row, Rows, Segmented, appHooks, type Output } from "@hearth/sdk/web";
-import { ageText, dateAndTime, failureText, updatedText, useNow, wholeNumber } from "./format";
+import { ageText, dateAndTime, failureText, updatedText, wholeNumber } from "./format";
 import manifest from "./manifest";
+import { useNow } from "./now";
 import type server from "./server";
 
 const { useApp, useQuery, useMutation, useJob } = appHooks<typeof server>();
@@ -183,6 +184,9 @@ export default function Page() {
           aria-label={`${rangeName(listRange)} · ${listLanguage === "" ? t("all") : languageName(listLanguage)}`}
           aria-busy={stale || undefined}
           className={stale ? "opacity-60" : undefined}
+          // Not a stop for Tab: the focus is put here when what had it went and the list is what follows.
+          tabIndex={-1}
+          data-repos=""
         >
           {lines.map((line) => {
             if (line.kind === "hid") {
@@ -257,7 +261,7 @@ export default function Page() {
         />
       )}
 
-      {canEdit ? <HiddenList newTab={newTab} /> : null}
+      {canEdit ? <HiddenList newTab={newTab} focusAfterChange={focusAfterChange} /> : null}
       <span id={newTab} hidden>
         {t("newTab")}
       </span>
@@ -269,14 +273,18 @@ export default function Page() {
  * "Hidden (n)", for whoever may change the space's Hide list: folded until
  * opened, it lists the hidden repositories, the last hidden first, each
  * with "Show again". It is not there while the list is empty.
+ *
+ * After "Show again" the focus goes to "Hidden (n)" while something is
+ * still hidden. After the last, there is no "Hidden (n)": it goes to the
+ * repository's own "Hide" in the list shown, or else to that list, or else
+ * to the range, which the page's `focusAfterChange` finds.
  */
-function HiddenList({ newTab }: { newTab: string }) {
+function HiddenList({ newTab, focusAfterChange }: { newTab: string; focusAfterChange: (...selectors: string[]) => void }) {
   const { t } = useApp();
   const hidden = useQuery("hidden");
   const show = useMutation("show");
   const [open, setOpen] = useState(false);
   const [showing, setShowing] = useState<number | null>(null);
-  const [root, focusAfterChange] = useFocusAfterChange();
   const list = useId();
   const ids = useId();
 
@@ -289,14 +297,14 @@ function HiddenList({ newTab }: { newTab: string }) {
     show
       .run({ githubId })
       .then(
-        () => focusAfterChange("[data-hidden-toggle]"),
+        () => focusAfterChange("[data-hidden-toggle]", `[data-hide="${githubId}"]`, "[data-repos]", '[aria-pressed="true"]'),
         () => {},
       )
       .finally(() => setShowing(null));
   };
 
   return (
-    <div ref={root} className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-start gap-2">
       <Button size="sm" aria-expanded={open} aria-controls={list} data-hidden-toggle="" onClick={() => setOpen((was) => !was)}>
         {t("hidden", { count: hidden.length })}
       </Button>
@@ -330,20 +338,28 @@ function HiddenList({ newTab }: { newTab: string }) {
 
 /**
  * After a change took away the control the person used (the row they hid,
- * the "Undo" they pressed), gives the focus to what took its place, found
- * by a selector inside `root` once the screen shows the change, so that a
+ * the "Undo" or "Show again" they pressed), gives the focus to what took
+ * its place: the first of the selectors, in their order, that finds
+ * something inside `root` once the screen shows the change, so that a
  * keyboard does not start again from the top of the page. Only when nothing
  * has the focus by then: a person who went on elsewhere keeps their place.
  */
-function useFocusAfterChange(): [RefObject<HTMLDivElement | null>, (selector: string) => void] {
+function useFocusAfterChange(): [RefObject<HTMLDivElement | null>, (...selectors: string[]) => void] {
   const root = useRef<HTMLDivElement>(null);
-  const [selector, setSelector] = useState<string | null>(null);
+  const [selectors, setSelectors] = useState<readonly string[] | null>(null);
   useEffect(() => {
-    if (selector === null) return;
-    setSelector(null);
+    if (selectors === null) return;
+    setSelectors(null);
     const focused = document.activeElement;
     if (focused !== null && focused !== document.body) return;
-    root.current?.querySelector<HTMLElement>(selector)?.focus();
-  }, [selector]);
-  return [root, setSelector];
+    for (const selector of selectors) {
+      const target = root.current?.querySelector<HTMLElement>(selector);
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
+  }, [selectors]);
+  const focusAfterChange = useCallback((...next: string[]) => setSelectors(next), []);
+  return [root, focusAfterChange];
 }

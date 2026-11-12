@@ -1,14 +1,14 @@
 /**
  * How GitHub Trending's card (widget.tsx) and page (page.tsx) write times
  * and counts, so that the two say the same thing in the same way: in the
- * reader's language and time zone, against the browser's clock, on a
- * 24-hour clock, with `Intl`.
+ * reader's language and time zone, against the browser's clock (`now`,
+ * which now.ts reads), on a 24-hour clock, with `Intl`.
  *
  * The times come from the job's status (`useJob`) and the stored lists, as
  * ISO strings. The words come from the manifest's messages, in both
- * languages; only the numbers and times are written here.
+ * languages; only the numbers and times are written here. Nothing here
+ * runs React, so format.test.ts tries it as it is.
  */
-import { useEffect, useState } from "react";
 import type { Locale, Translate } from "@hearth/sdk";
 import type { JobState } from "@hearth/sdk/web";
 import type server from "./server";
@@ -16,24 +16,12 @@ import type server from "./server";
 /** The app's `t`. */
 type T = Translate<typeof server>;
 
-/** How often the clock is read again, so that "Updated N min ago" and the ages move on by themselves. */
-const TICK_MS = 15_000;
 /** Up to this many minutes it says "Updated N min ago"; after that, the time of day. */
 const MINUTES_SHOWN = 90;
 /** Up to this many hours an age is in hours; after that, in days. */
 const HOURS_SHOWN = 48;
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
-
-/** This browser's clock, read again every TICK_MS while the component is shown. */
-export function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => clearInterval(timer);
-  }, []);
-  return now;
-}
 
 /** The language tag `Intl` formats in for the reader's language. */
 const tagOf = (locale: Locale) => (locale === "zh" ? "zh-CN" : "en-US");

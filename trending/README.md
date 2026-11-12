@@ -16,8 +16,10 @@ to see (see "The page" below).
 | `spam.ts` | The deny-list: three patterns of spam, which only `server.ts` imports. |
 | `widget.tsx` | The body of the dashboard card: the first five repositories of the reader's own range, of every language, each with its rank, owner/name linked to GitHub (in a new tab) and its stars; under them "Updated N min ago" (the time of day after 90 minutes), "Refreshing…" while a run is going on or was asked for, or the failed state ("Couldn't reach GitHub at 14:05. Showing results from 13:05."). |
 | `page.tsx` | The app's own page: "Updated N min ago" and "Refresh now", or the banner when the last refresh failed with "Try again"; the range (Today, This week, This month) and a chip for every language the space follows; the list, with each repository's rank, owner/name linked to GitHub, description, language, stars, forks and age; "Hide", "Undo" and "Hidden (n)" for people with edit access. |
-| `format.ts` | How the card and the page write times and counts, in the reader's language and on the browser's clock: "Updated 12 min ago", the failed state, "3 d old", "32,104"; and the clock they read again every 15 seconds. |
-| `trending.test.ts` | Its tests, written with `testApp` from `@hearth/sdk/testing` and run with `hearth-apps test`: the searches a run asks for, what it keeps and what the deny-list leaves out, runs that GitHub turns down or answers wrongly, the Hide list, the languages a space follows, and a personal space. |
+| `format.ts` | How the card and the page write times and counts, in the reader's language and time zone, against the browser's clock: "Updated 12 min ago", the failed state, "3 d old", "32,104". |
+| `now.ts` | The browser's clock, which the card and the page read again every 15 seconds, so that the minutes and ages move on by themselves. |
+| `trending.test.ts` | Its tests, written with `testApp` from `@hearth/sdk/testing` and run with `hearth-apps test`: the searches a run asks for, what it keeps and what the deny-list leaves out, runs that GitHub turns down, cuts short or answers wrongly, the Hide list, the languages a space follows, and a personal space. |
+| `format.test.ts` | The tests of `format.ts`: "Updated ..." and its 90 minutes, the failed state with its two times, ages and their 48 hours, and counts and times in both languages, on the clock of a time zone 8 hours from UTC, which `hearth-apps test` runs every app's tests in. |
 | `package.json` | The app's name. A mini-app declares no dependencies. |
 
 ## Where the lists come from
@@ -66,7 +68,9 @@ weeks' worth, so that a project that rose late in it stays.
 - **When GitHub says no.** A 403 or a 429, GitHub's answers to too many
   requests, stops the run at once: no other search is asked for. Any other
   status that is not 2xx, an answer that is not a list of repositories, and
-  no connection fail the run as well. Nothing is written until every
+  no connection fail the run as well, and so does a search GitHub cut short
+  (`incomplete_results` true: it ran out of time and gives only what it
+  found by then, which may be nothing). Nothing is written until every
   search has answered, so the lists of the last run that went well stay
   as they were, and the card says when the run failed and from when its
   lists are. The scheduler tries again 5, 10, 20 and 40 minutes later, then
@@ -211,8 +215,9 @@ since this repository has no Playwright: the owner and a family member,
 each in a browser of their own, on one server built with this folder,
 whose job runs against a file of stand-ins in place of GitHub. It answers
 each search by the text of its query (`fork:false archived:false
-forks:>=10 language:rust` for this week's Rust), so a change to the
-searches, as to the app's texts or layout, changes that test too. Run it
-there with `pnpm e2e:mini-apps` before such a change is merged.
+forks:>=10 language:rust` for this week's Rust), the family following
+TypeScript and Rust, and turns down a search for any other language, so a
+change to the searches, as to the app's texts or layout, changes that test
+too. Run it there with `pnpm e2e:mini-apps` before such a change is merged.
 
 Everything in this folder is sample data.

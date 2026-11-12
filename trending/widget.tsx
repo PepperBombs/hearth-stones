@@ -1,7 +1,8 @@
 import { useId } from "react";
 import { EmptyState, Icon, Row, Rows, appHooks } from "@hearth/sdk/web";
-import { compactNumber, failureText, updatedText, useNow, wholeNumber } from "./format";
+import { compactNumber, failureText, updatedText, wholeNumber } from "./format";
 import manifest from "./manifest";
+import { useNow } from "./now";
 import type server from "./server";
 
 const { useApp, useQuery, useJob } = appHooks<typeof server>();
