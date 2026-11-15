@@ -10,10 +10,10 @@ framework and its SDK live in the `hearth` repository; on a server the two
 are checked out side by side. This repository is public and licensed under
 AGPL-3.0.
 
-It holds two mini-apps so far: the grocery list (`grocery/`) and GitHub
-Trending (`trending/`). Mini-apps are written to the mini-app contract,
-which is built in `hearth` (`docs/mini-app-contract.md` there): the
-manifest, the SDK, storage, settings, jobs, tests, this repository's own
+It holds three mini-apps so far: the grocery list (`grocery/`), GitHub
+Trending (`trending/`) and Ideas (`ideas/`). Mini-apps are written to the
+mini-app contract, which is built in `hearth`
+(`docs/mini-app-contract.md` there): the manifest, the SDK, storage, settings, jobs, tests, this repository's own
 setup and the template a new app starts from (`pnpm new <id>`). Read
 `hearth`'s AGENTS.md for where it stands.
 
@@ -58,6 +58,11 @@ setup and the template a new app starts from (`pnpm new <id>`). Read
    steps C1 to C8 there, so CI here passes with it once those are on
    `main` of `hearth`, which is merged first; the end-to-end test runs in
    `hearth`'s CI once this app is on `main` here.
+3. Ideas (a timeline of short notes, after the design of Memos, which the
+   owner chose over running Memos beside Hearth). Built: `ideas/`: writing
+   an idea, editing, deleting, pinning, #tags, search and an archive, on a
+   dashboard card and a page. No Markdown, no settings. It has no
+   end-to-end test in `hearth` yet.
 
 Later: stocks, finance, notes.
 
@@ -76,6 +81,7 @@ how the server holds them, and how CI checks them out.
 | `<app>/` | One folder per mini-app, named after its ID. `manifest.ts`, `widget.tsx`, `package.json` (its name, `@hearth-stones/<id>`, and no dependencies) and `README.md` are required; `page.tsx`, `server.ts` and tests (`*.test.ts`) are optional. `pnpm new <id>` starts one. The SDK's README in `hearth` (`packages/sdk/README.md`) says what each holds. |
 | `grocery/` | The grocery list: a shopping list the people of a space share, grouped by the aisles the space sets, with each person's own "Hide ticked items". Its README says how its data is shaped and what `add` does with a name that is on the list already. |
 | `trending/` | GitHub Trending: the new repositories on GitHub with the most stars, created in the last day, week or month. Its job (`refresh` in `server.ts`, every hour) searches `api.github.com` for every language and each language the space follows, leaves out spam (`spam.ts`, the deny-list) and keeps the lists; a search GitHub turns down, cuts short (`incomplete_results`) or answers wrongly fails the run and keeps the lists of the last good one. The space's Hide list is left out of every list. Its card shows the first five of each person's own range; its page (`page.tsx`) every list, by range and by language, with "Refresh now", the banner when a refresh failed, and "Hide", "Undo" and "Hidden (n)" for edit access. `format.ts` writes the times and counts of both against the browser's clock, which `now.ts` reads every 15 seconds; it imports nothing at run time, so `format.test.ts` tries it by itself. Its README says what the searches ask, what is kept, what the page shows and how to run it against stand-ins. |
+| `ideas/` | Ideas: short notes written down the moment they come, on one timeline per space (private in a personal space, shared in a group). One collection, `ideas`: the text (plain, up to 4000 characters), `pinned`, `archived` and `tags`, the #tags of the text, kept with the row. `text.ts` says what a tag is ("#" and 1 to 30 letters, digits, "_" or "-", in any script, not inside a web address), and folds tags and searches (NFKC, lower case); the server and the page both import it, so it imports nothing. `list` gives the active or the archived ideas, pinned first and then the newest first, by tag and by search, with how many each view holds; `latest` the three written last, for the card; `tags` the tags of the active ideas, the most used first; `add`, `edit`, `pin`, `archive` (which unpins) and `remove` change them. Its card has a box to write an idea at once; its page (`page.tsx`) the box, the search, the tag chips, the switch between active and archived and the timeline, with Pin, Edit, Archive and Delete for edit access. `format.ts` cuts a text into plain text and tags and writes when it was written, on the reader's clock, which `now.ts` reads every 15 seconds. Its README says how its data is shaped, what a tag and a search are, and what each route does. |
 
 Commands, from this folder, once `pnpm install` has run in `../hearth`:
 
@@ -116,8 +122,9 @@ Things that bite:
   `e2e/mini-apps/<id>.spec.ts` in `hearth`, two people of a family using
   it in their browsers: `grocery.spec.ts` (sharing one list) and
   `trending.spec.ts` (the lists, the Hide list and the failed states, its
-  job running over stand-ins for GitHub's search). `pnpm e2e:mini-apps`
-  there builds Hearth with this folder and runs them, and so does
+  job running over stand-ins for GitHub's search); Ideas has none yet.
+  `pnpm e2e:mini-apps` there builds Hearth with this folder and runs them,
+  and so does
   `hearth`'s CI, against `main` of this repository; CI here does not.
   Before merging a change to an app's texts or layout, run it, and change
   the test in `hearth` with it. GitHub Trending's test answers each search
@@ -141,6 +148,25 @@ Things that bite:
   React's `useDeferredValue`: the control answers at once, and the list
   shown stays, dimmed, until the new one comes, also when a setting
   changed it.
+- The store finds rows by fields that equal a text, a number or a switch,
+  and nothing else: no "contains", no list. What an app looks up another
+  way it works out when the row is written and keeps beside it, as Ideas
+  keeps the #tags of a text in `tags`, and filters in the handler. Such a
+  field is as old as its row: a change to what a tag is (`ideas/text.ts`)
+  reaches a stored idea only when it is edited, while the page, which
+  reads the text afresh, draws by the new rule at once. Change that rule
+  with the rows in mind.
+- A handler that filters reads the whole collection first, and the store
+  gives at most 5000 rows at a time. An app whose search must reach every
+  row holds no more than that: Ideas turns `add` down at 5000 ideas. Its
+  test of that limit writes 5000 ideas, which takes a few seconds.
+- A file that the server file and the widget or page both import
+  (`ideas/text.ts`) may import nothing of the SDK's two sides: keep it to
+  plain functions and constants.
+- The kit has `Input`, one line, and no box of several lines. Ideas'
+  page makes its own `<textarea>` from the kit's token classes, in
+  `Input`'s look; a second app that needs one should ask for it in the
+  kit (an SDK change in `hearth`) rather than copy it again.
 - A job runs for the space, for no one in it: its `ctx.settings` holds the
   space's settings alone. What a job needs to know is a setting of scope
   `space` (GitHub Trending's `languages`); a person's own settings (its

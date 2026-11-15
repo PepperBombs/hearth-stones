@@ -5,11 +5,14 @@ each. A mini-app is a small, self-contained app (a grocery list, a feed of
 trending repositories) that appears as a widget on the Hearth dashboard and,
 optionally, as a full page.
 
-Status: two mini-apps. The grocery list (`grocery/`): a shopping list the
+Status: three mini-apps. The grocery list (`grocery/`): a shopping list the
 family shares, grouped by aisle. GitHub Trending (`trending/`): the new
 repositories on GitHub with the most stars, by day, week and month,
 searched every hour, on a dashboard card and on a page of its own with
 the range, the languages the space follows and a Hide list against spam.
+Ideas (`ideas/`): short notes written down the moment they come, on a
+timeline with #tags, pins, search and an archive, and a dashboard card to
+write one at once.
 
 ## Working on the apps
 
