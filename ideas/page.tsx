@@ -96,6 +96,8 @@ export default function Page() {
     setView("active");
     setTyped("");
     if (tag !== "" && !idea.tags.includes(tag)) setTag("");
+    // "Save" switches itself off once the box is empty: the focus goes back to the box, for the next idea.
+    focusAfterChange("[data-composer]");
   };
 
   const inList = (idea: Idea, control: string) => `[data-idea="${CSS.escape(idea.id)}"] [data-${control}]`;

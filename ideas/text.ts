@@ -31,6 +31,13 @@ const WEB_ADDRESS = /https?:\/\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+/gi;
  */
 const TAG = /[#＃]([\p{L}\p{M}\p{N}_＿－-]{1,30})(?![\p{L}\p{M}\p{N}_＿－-])/gu;
 
+/**
+ * What a tag still has to be once it is folded. Folding can turn one letter
+ * into many, with spaces among them (some Arabic ligatures do): such a run
+ * is no tag, so that the tag a row keeps is always one a text could hold.
+ */
+const FOLDED_TAG = /^[\p{L}\p{M}\p{N}_-]{1,30}$/u;
+
 /** A tag found in a text: where it stands there, "#" included, and the tag itself, folded. */
 export type TagFound = { start: number; end: number; tag: string };
 
@@ -44,7 +51,9 @@ export function findTags(text: string): TagFound[] {
   for (const match of text.matchAll(TAG)) {
     const start = match.index;
     if (addresses.some((address) => start >= address.start && start < address.end)) continue;
-    found.push({ start, end: start + match[0].length, tag: fold(match[1] ?? "") });
+    const tag = fold(match[1] ?? "");
+    if (!FOLDED_TAG.test(tag)) continue;
+    found.push({ start, end: start + match[0].length, tag });
   }
   return found;
 }

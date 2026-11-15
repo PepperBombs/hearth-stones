@@ -35,6 +35,10 @@ describe("the tags of a text", () => {
     expect(tagsOf("(#café) #naïve #Ünïcode")).toEqual(["café", "naïve", "ünïcode"]);
     expect(tagsOf(`#${"长".repeat(30)}`)).toEqual(["长".repeat(30)]);
     expect(tagsOf(`#${"长".repeat(31)}`)).toEqual([]);
+    // A letter that folds into several words is no tag: what a row keeps is a tag a text could hold.
+    expect(tagsOf("#\uFDFA\uFDFA and #ok")).toEqual(["ok"]);
+    // A # straight after a letter starts a tag all the same.
+    expect(tagsOf("C#sharp")).toEqual(["sharp"]);
   });
 
   it("are the same in any case and width, each kept once", () => {

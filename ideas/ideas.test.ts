@@ -180,8 +180,13 @@ describe("ideas", () => {
     expect(texts(sam.query("list", { search: "爬山　相机" }))).toEqual(["周末去爬山，带上相机"]);
     expect(texts(sam.query("list", { search: "#kitchen" }))).toEqual(["A bread box for the counter #kitchen"]);
     expect(sam.query("list", { search: "bread rye" })).toMatchObject({ ideas: [], counts: { active: 3, archived: 1 } });
+    // What is typed is looked for as it is, never read as a pattern.
+    sam.mutation("add", { text: "abc and c++ (really)" });
+    expect(texts(sam.query("list", { search: "a.c" }))).toEqual([]);
+    expect(texts(sam.query("list", { search: "c++" }))).toEqual(["abc and c++ (really)"]);
+    expect(texts(sam.query("list", { search: "(really)" }))).toEqual(["abc and c++ (really)"]);
     // Nothing typed, or spaces alone, lists everything.
-    expect(texts(sam.query("list", { search: "   " }))).toHaveLength(3);
+    expect(texts(sam.query("list", { search: "   " }))).toHaveLength(4);
     // A search stays in the view it is asked in, and narrows a tag.
     expect(texts(sam.query("list", { search: "sunday", view: "archived" }))).toEqual(["Sunday market stall"]);
     expect(texts(sam.query("list", { search: "bread", tag: "kitchen" }))).toEqual(["A bread box for the counter #kitchen"]);
@@ -231,6 +236,9 @@ describe("ideas", () => {
 
     expect(() => sam.mutation("add", { text: "one too many" })).toThrow("conflict");
     expect(sam.query("list", { limit: 1 })).toMatchObject({ ideas: [{ text: "idea 5000" }], more: true, counts: { active: 4999, archived: 1 } });
+    // 200 unless told.
+    expect(sam.query("list", {})).toMatchObject({ more: true });
+    expect(sam.query("list", {}).ideas).toHaveLength(200);
     // The oldest of them is still within reach of a search, a tag and the count of tags.
     expect(texts(sam.query("list", { search: "oldest" }))).toEqual(["the oldest active idea #old"]);
     expect(texts(sam.query("list", { tag: "old" }))).toEqual(["the oldest active idea #old"]);

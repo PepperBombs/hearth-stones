@@ -13,8 +13,9 @@ AGPL-3.0.
 It holds three mini-apps so far: the grocery list (`grocery/`), GitHub
 Trending (`trending/`) and Ideas (`ideas/`). Mini-apps are written to the
 mini-app contract, which is built in `hearth`
-(`docs/mini-app-contract.md` there): the manifest, the SDK, storage, settings, jobs, tests, this repository's own
-setup and the template a new app starts from (`pnpm new <id>`). Read
+(`docs/mini-app-contract.md` there): the manifest, the SDK, storage,
+settings, jobs, tests, this repository's own setup and the template a new
+app starts from (`pnpm new <id>`). Read
 `hearth`'s AGENTS.md for where it stands.
 
 ## Rules that must not be broken

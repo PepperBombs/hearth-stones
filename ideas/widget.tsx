@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Button, EmptyState, Icon, Input, Row, Rows, appHooks } from "@hearth/sdk/web";
 import { dateAndTime, whenText } from "./format";
 import { useNow } from "./now";
@@ -28,6 +28,7 @@ export default function Widget() {
   const add = useMutation("add");
   const now = useNow();
   const [text, setText] = useState("");
+  const form = useRef<HTMLFormElement>(null);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -35,7 +36,11 @@ export default function Widget() {
     const sent = text;
     // What was typed stays in the box when it could not be saved, and so does what was typed since.
     add.run({ text: sent }).then(
-      () => setText((typed) => (typed === sent ? "" : typed)),
+      () => {
+        setText((typed) => (typed === sent ? "" : typed));
+        // "Save" switches itself off once the box is empty: the focus goes back to the box, for the next idea.
+        form.current?.querySelector("input")?.focus();
+      },
       () => {},
     );
   };
@@ -43,7 +48,7 @@ export default function Widget() {
   return (
     <div className="flex min-h-[88px] flex-1 flex-col gap-1.5">
       {canEdit ? (
-        <form onSubmit={submit} className="flex gap-2">
+        <form ref={form} onSubmit={submit} className="flex gap-2">
           <Input
             value={text}
             onChange={(event) => setText(event.target.value)}
