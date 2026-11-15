@@ -145,7 +145,8 @@ export default function Page() {
             <div role="group" aria-label={t("tags")} className="flex flex-wrap gap-1.5">
               {[...chips, ...chosen].map((entry) => (
                 <Chip key={entry.tag} pressed={tag === entry.tag} onClick={() => pickTag(entry.tag)}>
-                  #{entry.tag}
+                  {/* A space of its own, which no screen shows: the chip is read as "#v2 1", not "#v21". */}
+                  #{entry.tag}{" "}
                   {entry.count > 0 ? <span className="num ml-1.5 text-xs text-fg-3">{entry.count}</span> : null}
                 </Chip>
               ))}

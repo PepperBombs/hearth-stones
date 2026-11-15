@@ -61,8 +61,9 @@ setup and the template a new app starts from (`pnpm new <id>`). Read
 3. Ideas (a timeline of short notes, after the design of Memos, which the
    owner chose over running Memos beside Hearth). Built: `ideas/`: writing
    an idea, editing, deleting, pinning, #tags, search and an archive, on a
-   dashboard card and a page. No Markdown, no settings. It has no
-   end-to-end test in `hearth` yet.
+   dashboard card and a page. No Markdown, no settings. Its end-to-end
+   test is in `hearth` (`e2e/mini-apps/ideas.spec.ts`), and runs in
+   `hearth`'s CI once this app is on `main` here.
 
 Later: stocks, finance, notes.
 
@@ -120,9 +121,11 @@ Things that bite:
 - An app's end-to-end test is not here: this repository has no Playwright,
   since it installs nothing but the SDK's link. Each app's is
   `e2e/mini-apps/<id>.spec.ts` in `hearth`, two people of a family using
-  it in their browsers: `grocery.spec.ts` (sharing one list) and
+  it in their browsers: `grocery.spec.ts` (sharing one list),
   `trending.spec.ts` (the lists, the Hide list and the failed states, its
-  job running over stand-ins for GitHub's search); Ideas has none yet.
+  job running over stand-ins for GitHub's search) and `ideas.spec.ts`
+  (the owner writing, tagging, searching, pinning, editing, archiving and
+  deleting, then Lin reading on her phone and writing once she may edit).
   `pnpm e2e:mini-apps` there builds Hearth with this folder and runs them,
   and so does
   `hearth`'s CI, against `main` of this repository; CI here does not.
@@ -131,7 +134,9 @@ Things that bite:
   by the text of its query (`fork:false archived:false forks:>=10
   language:rust`), the family following TypeScript and Rust, and turns
   down a search for any other language, so a change to the searches
-  changes it too.
+  changes it too. Ideas' test finds a tag's chip by its name, "#tag n":
+  the space between the tag and its count is in `page.tsx` for screen
+  readers, though no screen shows it.
 - `pnpm dev` runs the apps' jobs against the real hosts their manifests
   name: GitHub Trending searches the real `api.github.com` as soon as it
   is added to a space, and every hour after, from this machine's address,
